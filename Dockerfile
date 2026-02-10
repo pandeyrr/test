@@ -1,4 +1,2 @@
-FROM ubuntu:latest
-LABEL authors="Ravikant"
-
-ENTRYPOINT ["top", "-b"]
+FROM nginx:alpine
+COPY index.html /usr/share/nginx/html/index.html
