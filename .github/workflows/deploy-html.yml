@@ -4,16 +4,15 @@ on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Login to OpenShift
       - name: Login to OpenShift
         uses: redhat-actions/oc-login@v1
         with:
@@ -21,14 +20,12 @@ jobs:
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           namespace: ${{ secrets.OPENSHIFT_NAMESPACE }}
 
-      # Step 3: Deploy HTML to OpenShift
       - name: Deploy HTML
         run: |
           # Create or update ConfigMap with index.html
           oc create configmap test-html --from-file=index.html --dry-run=client -o yaml | oc apply -f -
 
-          # Apply Deployment + Service + Route inline
-          oc apply -f - <<EOT
+  oc apply -f - <<EOT
 apiVersion: apps/v1
 kind: Deployment
 metadata:
