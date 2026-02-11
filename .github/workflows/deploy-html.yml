@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Step 2: Login to OpenShift
       - name: Login to OpenShift
         uses: redhat-actions/oc-login@v1
         with:
@@ -20,59 +22,11 @@ jobs:
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           namespace: ${{ secrets.OPENSHIFT_NAMESPACE }}
 
+      # Step 3: Deploy HTML
       - name: Deploy HTML
         run: |
-          # Create or update ConfigMap with index.html
+          # 1. Create/update ConfigMap
           oc create configmap test-html --from-file=index.html --dry-run=client -o yaml | oc apply -f -
 
-  oc apply -f - <<EOT
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: test
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: test
-  template:
-    metadata:
-      labels:
-        app: test
-    spec:
-      containers:
-        - name: test
-          image: nginx:alpine
-          ports:
-            - containerPort: 80
-          volumeMounts:
-            - name: html
-              mountPath: /usr/share/nginx/html
-      volumes:
-        - name: html
-          configMap:
-            name: test-html
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: test
-spec:
-  selector:
-    app: test
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
----
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: test
-spec:
-  to:
-    kind: Service
-    name: test
-  port:
-    targetPort: 80
-  EOT
+          # 2. Apply Deployment, Service, and Route inline
+          printf "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: test\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: test\n  template:\n    metadata:\n      labels:\n        app: test\n    spec:\n      containers:\n      - name: test\n        image: nginx:alpine\n        ports:\n        - containerPort: 80\n        volumeMounts:\n        - name: html\n          mountPath: /usr/share/nginx/html\n      volumes:\n      - name: html\n        configMap:\n          name: test-html\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: test\nspec:\n  selector:\n    app: test\n  ports:\n  - protocol: TCP\n    port: 80\n    targetPort: 80\n---\napiVersion: route.openshift.io/v1\nkind: Route\nmetadata:\n  name: test\nspec:\n  to:\n    kind: Service\n    name: test\n  port:\n    targetPort: 80" | oc apply -f -
